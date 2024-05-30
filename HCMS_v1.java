@@ -1,232 +1,342 @@
-import java.util.Scanner;
-import java.io.File;
-import java.io.IOException;
-import java.time.Duration;
+import java.io.*;
 import java.time.LocalDateTime;
+import java.time.Duration;
+import java.util.*;
 
-public class HCMS{
-
+public class hcms2_202321811 {
     public static void main(String[] args) throws IOException {
-        //입력
+        int count;
+        String command=null;
+        Highway highway = new Highway();
+        EnterGate enterGate;
+        ExitGate exitGate;
+        CarList cl;
+        Time time;
+
         Scanner scan = new Scanner(new File("hcms.txt"));
-
-        //기본 요금 및 거리요율
-        double bsFee = scan.nextDouble();
-        double disRt = scan.nextDouble();
-        scan.nextLine();
-
-        //차량 수(vNum)
-        int vNum = scan.nextInt();
-        CAR[] CarList = new CAR[vNum];
-
-        //차량 번호 배기량 속도
-        for(int i=0;i<vNum;i++){
-            scan.nextLine();
-            CarList[i] = new CAR(scan.nextInt(), scan.nextInt(), scan.nextInt());
-        }
-
+        exitGate = new ExitGate(scan.nextInt(), scan.nextInt());
+        cl = new CarList(scan.nextInt());
+        cl.setcarList(scan);
         scan.close();
 
-        //현재시각 설정
-        TIME time = new TIME(2024,03,20,21,00);
-        int stand = 113760;
+        time = new Time(2024, 3, 20, 21, 0);
 
-        String test; TIME cur; int number;
-        Scanner in = new Scanner(new File("in.txt"));
+        Scanner in = new Scanner(System.in);
         while(true){
-            test=null;
-            try {
-            test = in.next();
-            } catch(Exception e) {
-                System.out.println("error: 명령 약자를 입력하세요."); in.nextLine(); continue;
-            }
-            //t
-            if(test.equals("t")){
-                try {
-                    cur = new TIME(in.nextInt(),in.nextInt(),in.nextInt(),in.nextInt(),in.nextInt());
-                } catch (Exception e) {
-                    System.out.println("error: 잘못된 시간 입력"); in.nextLine(); continue;
-                }
-                //오류 처리
-                //월, 일 숫자 유효한지 판단
-                if(cur.year%4==0&&cur.year%100!=0){
-                    switch(cur.mon){
-                        case 1,3,5,7,8,10,12:
-                        if(1>cur.date||cur.date>31) {System.out.println("error: 잘못된 시간 입력"); in.nextLine(); continue;}
-                        else break;
-                        case 4,6,9,11:
-                        if(1>cur.date||cur.date>30) {System.out.println("error: 잘못된 시간 입력"); in.nextLine(); continue;}
-                        else break;
-                        case 2:
-                        if(1>cur.date||cur.date>29) {System.out.println("error: 잘못된 시간 입력"); in.nextLine(); continue;}
-                        else break;
-                        default: System.out.println("error: 잘못된 시간 입력"); in.nextLine(); continue;
-                    }
-                } else{
-                    switch(cur.mon){
-                        case 1,3,5,7,8,10,12:
-                        if(1>cur.date||cur.date>31) {System.out.println("error: 잘못된 시간 입력"); in.nextLine(); continue;}
-                        else break;
-                        case 2,4,6,9,11:
-                        if(1>cur.date||cur.date>30) {System.out.println("error: 잘못된 시간 입력"); in.nextLine(); continue;}
-                        else break;
-                        default: System.out.println("error: 잘못된 시간 입력"); in.nextLine(); continue;
-                    }
-                }
-                LocalDateTime a = LocalDateTime.of(time.year, time.mon, time.date, time.hour, time.min);
-                LocalDateTime b = LocalDateTime.of(cur.year, cur.mon, cur.date, cur.hour, cur.min);
-                Duration dur1 = Duration.between(a, b);
-                long durmin1 = dur1.toMinutes();
-                if(durmin1<=0) {System.out.println("error: 잘못된 시간 입력"); in.nextLine(); continue;}
-                //시간 설정
-                else{
-                    time=cur;
-                    //위치, 진출여부, 통행료 계산
-                    for(CAR c: CarList)
-                    {
-                        if(c.onway==1||c.onway==2){
-                            LocalDateTime s = LocalDateTime.of(c.stime.year, c.stime.mon, c.stime.date, c.stime.hour, c.stime.min);
-                            LocalDateTime now = LocalDateTime.of(time.year, time.mon, time.date, time.hour, time.min);
-                            Duration dur = Duration.between(s, now);
-                            long durmin = dur.toMinutes();
-                            c.dt=(double) durmin/60*c.cvel;
-                            if(c.dt>=c.delp){
-                                c.onway=3;
-                                c.fee=(int)(bsFee+(c.delp*disRt))*c.cvel/100*c.cdis/2000;
-                                c.fee=(int)(c.fee/10)*10;
-                            }
-                            else if(c.dt<c.delp){
-                                if(c.onway==1){
-                                    c.pos=c.pos1+c.dt;
-                                }
-                                else if(c.onway==2){
-                                    c.pos=c.pos1-c.dt;
-                                }
-                            }
-                        }
-                        }
-                    }
-                    in.nextLine();
-                    continue;
-                }
-
-            //n
-            else if(test.equals("n")){
-                try {
-                    number=in.nextInt();
-                } catch(Exception e) {
-                    System.out.println("error: 차량번호가 입력되어야 합니다."); in.nextLine(); continue;
-                }
-                int co=0;
-                for(CAR c: CarList){
-                    if(c.cnum==number){
-                        co++;
-                        if(c.onway==0){
-                            c.stime=time;
-                            c.spoint=in.next(); c.epoint=in.next();
-                            switch(c.spoint){
-                                case "서울": c.pos1=0; break;
-                                case "수원": c.pos1=30; break;
-                                case "대전": c.pos1=130; break;
-                                case "대구": c.pos1=290; break;
-                                case "부산": c.pos1=400; break;
-                                default: System.out.println("error: 잘못된 출발 위치"); in.nextLine(); continue;
-                            }
-                            c.pos=c.pos1;
-                            switch(c.epoint){
-                                case "서울": c.pos2=0; break;
-                                case "수원": c.pos2=30; break;
-                                case "대전": c.pos2=130; break;
-                                case "대구": c.pos2=290; break;
-                                case "부산": c.pos2=400; break;
-                                default: System.out.println("error: 잘못된 도착 위치"); in.nextLine(); continue;
-                            }
-                            c.delp=c.pos2-c.pos1;
-                            //분단위 소요시간
-                            c.deltime=(int)c.delp/c.cvel*60;
-                            LocalDateTime now = LocalDateTime.of(time.year, time.mon, time.date, time.hour, time.min);
-                            LocalDateTime end = now.plusMinutes(c.deltime);
-                            c.etime.year=end.getYear(); c.etime.mon=end.getMonthValue(); c.etime.date=end.getDayOfMonth(); c.etime.hour=end.getHour(); c.etime.min=end.getMinute();
-                            if(c.delp>0) c.onway=1;
-                            else if(c.delp<0) {c.delp=-c.delp; c.onway=2;}
-                            else if(c.delp==0) continue;
-                            }
-                            else System.out.println("고속도로 진입 전인 차량만 진입시킬 수 있습니다.");
-                        }
-                    }
-                    if(co==0) System.out.println("입력된 차량 번호는 목록에 없습니다.");
-                    in.nextLine();
-                    continue;       
-                }
-
-            //o
-            else if(test.equals("o")){
-                System.out.println("현재시간: "+time.year+"/"+time.mon+"/"+time.date+"-"+time.hour+":"+time.min);
-                int count=0; 
-                for(CAR c: CarList){
-                    if(c.onway==1||c.onway==2){
-                        count++;
-                        System.out.println(count+". "+c.cnum+" "+c.cdis+"cc "+c.cvel+"km "+c.spoint+"->"+c.epoint+" "+c.stime.year+"/"+c.stime.mon+"/"+c.stime.date+"-"+c.stime.hour+":"+c.stime.min+" 위치:"+c.pos+"km");
-                    }
-                    else continue;
-                    }
-                if(count==0) System.out.println("에 통행 차량이 없습니다!");
+            try{
+                command=in.next();
+            } catch(Exception e){
+                System.out.println("[error - wrong command character!]");
                 in.nextLine();
-                continue;
-                }
-
-            //x
-            else if(test.equals("x")){
-                System.out.println("현재시간: "+time.year+"/"+time.mon+"/"+time.date+"-"+time.hour+":"+time.min);
-                int count=0;
-                for(CAR c: CarList){
-                    if(c.onway==3){
-                        count++;
-                        System.out.println(count+". "+c.cnum+" "+c.cdis+"cc "+c.cvel+"km "+c.spoint+"->"+c.epoint+" "+c.stime.year+"/"+c.stime.mon+"/"+c.stime.date+"-"+c.stime.hour+":"+c.stime.min+" "+c.etime.year+"/"+c.etime.mon+"/"+c.etime.date+"-"+c.etime.hour+":"+c.etime.min+" "+c.fee+"원");
-                    }
-                    else continue;
-                    }
-                if(count==0) System.out.println("진출한 차량이 없습니다!");
-                continue;                           
             }
 
-            //q
-            else if(test.equals("q")){
+            if(command.equals("t")){
+                Time temp = new Time(in.nextInt(), in.nextInt(), in.nextInt(), in.nextInt(), in.nextInt());
+                if(time.checkTimeError(temp)){
+                    time = temp;
+                }
+                else continue;
+                highway.updateCar(cl.getcarList(), time, exitGate);
+                continue;
+            }
+
+            else if(command.equals("n")){
+                int num=0;
+                try{
+                    num = in.nextInt();
+                } catch(Exception e) { System.out.println("[error - car number format is wrong!]"); in.nextLine(); }
+                count=0;
+                for(Car c: cl.getcarList()){
+                    if(c.getNumber()==num){
+                        count++;
+                        if(c.getOnway()==1||c.getOnway()==2) { System.out.println("[error - Aleardy running car!]"); in.nextLine(); continue; }
+                        enterGate = new EnterGate(time);
+                        try{
+                            enterGate.enterCar(c, in.next(), in.next(), time);
+                        } catch(Exception e) { System.out.println("[error - Point format is wrong!]"); in.nextLine(); }
+                    }
+                }
+                if(count==0) { System.out.println("[error - car number does not exist!]"); in.nextLine(); }
+                continue;
+            }
+
+            else if(command.equals("o")){
+                count=0;
+                for(Car c: cl.getcarList()){
+                    if(c.getOnway()==1||c.getOnway()==2){
+                        count++;
+                        System.out.println(count+". "+c.getNumber()+" "+c.getPosition()+"km");
+                    }
+                }
+                if(count==0) System.out.println("통행 차량이 없습니다!");
+                continue;
+            }
+
+            else if(command.equals("x")){
+                count=0;
+                for(Car c: cl.getcarList()){
+                    if(c.getOnway()==3){
+                        count++;
+                        System.out.println(count+". "+c.getNumber()+" "+c.getExitTime()+" "+c.getFee()+"원");
+                    }
+                }
+                if(count==0) System.out.println("진출한 차량이 없습니다!");
+                continue;
+            }
+
+            else if(command.equals("r")){
+                try{
+                    cl.registerCar(in.nextInt(), in.nextDouble(), in.nextDouble());
+                } catch(Exception e){
+                    System.out.println("[error - car information format is wrong!]");
+                    in.nextLine();
+                }
+                
+                continue;
+            }
+
+            else if(command.equals("q")){
                 in.close();
                 System.exit(0);
             }
-            else { System.out.println("error: 잘못된 명령 약자"); continue;}
+
+            else{
+                System.out.println("[error - wrong command character!]");
+                in.nextLine();
+                continue;
+            }
+        }
+
+    }
+}
+
+class CarList {
+    private int current;
+    private Car[] carList;
+
+    CarList(int n){
+        current=n;
+        carList = new Car[n];
+    }
+
+    public Car[] getcarList(){ return carList; }
+    public void setcarList(Scanner s){
+        for(int i=0;i<current;i++){
+            carList[i] = new Car(s.nextInt(), s.nextDouble(), s.nextDouble());
+        }
+    }
+    public void registerCar(int n,double d,double s){
+        for(Car c: carList){
+            if(c.getNumber()==n) {
+                System.out.println("[error - already registered car number!]");
+                return;
+            }
+        }
+        current++;
+        Car[] temp = new Car[current];
+        for(int i=0;i<current-1;i++){
+            temp[i]=carList[i];
+        }
+        temp[current-1]=new Car(n,d,s);
+        carList=temp;
+    }
+}
+
+class Car {
+    private final int number;
+    private final double displacement;
+    private final double speed;
+    private int onway=0;
+    private Time enterTime;
+    private String enterPoint;
+    private int enterDistance;
+    private Time exitTime;
+    private String exitPoint;
+    private int exitDistance;
+    private int distance;
+    private int position;
+    private int fee;
+
+    Car(int number, double displacement, double speed){
+        this.number=number; this.displacement=displacement; this.speed=speed;
+    }
+
+    public int getNumber(){ return number; }
+    public double getDisplacement(){ return displacement; }
+    public double getSpeed(){ return speed; }
+    public void setOnway(int onway){
+        this.onway = onway;
+    }
+    public int getOnway(){ return onway; }
+    public void setEnterTime(Time t){
+        enterTime=t;
+    }
+    public Time getEnterTime() { return enterTime; }
+    public int getEnterDistatnce() { return enterDistance; }
+    public void setExitTime(Time t){
+        exitTime=t;
+    }
+    public Time getExitTime() { return exitTime; }
+    public int getExitDistance() { return exitDistance; }
+    public void setPoint(int enterDistance, int exitDistance) {
+        this.enterDistance=enterDistance; this.exitDistance=exitDistance;
+    }
+    public void setDistance(int distance){
+        this.distance=distance;
+    }
+    public int getDistance(){ return distance; }
+    public void setPosition(int position){
+        this.position=position;
+    }
+    public int getPosition(){ return position; }
+    public void setFee(int fee){
+        this.fee=fee;
+    }
+    public int getFee(){ return fee; }
+}
+
+class EnterGate {
+    private Time enterTime;
+
+    EnterGate(Time t){
+        enterTime=t;
+    }
+
+    public Time getEnterTime(){ return enterTime; }
+    public boolean checkPoint(String p1, String p2){
+        if(p1.equals(p2)) { System.out.println("[error - entry point and exit point must be different!]"); return false; }
+        if((p1.equals("서울")||p1.equals("수원")||p1.equals("대전")||p1.equals("대구")||p1.equals("부산"))==false) { System.out.println("[error - entry point should be included in list!]"); return false; }
+        if((p2.equals("서울")||p2.equals("수원")||p2.equals("대전")||p2.equals("대구")||p2.equals("부산"))==false) { System.out.println("[error - exit point should be included in list!]"); return false; }
+        return true;
+    }
+    public void enterCar(Car c,String p1,String p2,Time t){
+        if(checkPoint(p1,p2)){
+            int d1, d2;
+            switch(p1){
+                case "서울": d1=0; break;
+                case "수원": d1=30; break;
+                case "대전": d1=130; break;
+                case "대구": d1=290; break;
+                default: d1=400; break;
+            }
+            switch(p2){
+                case "서울": d2=0; break;
+                case "수원": d2=30; break;
+                case "대전": d2=130; break;
+                case "대구": d2=290; break;
+                default: d2=400; break;
+            }
+            if(d2-d1>0){
+                c.setDistance(d2-d1);
+                c.setOnway(1);
+            }
+            else{
+                c.setDistance(d1-d2);
+                c.setOnway(2);
+            }
+            c.setPoint(d1,d2);
+            c.setPosition(d1);
+            c.setEnterTime(enterTime);
+            c.setExitTime(t.plusTime((int)(c.getDistance()/c.getSpeed()*60)));            
+        }
+    }
+
+}
+
+class ExitGate {
+    private static int basicFee;
+    private static int distanceRate;
+
+    ExitGate(int basicFee, int distanceRate) {
+        this.basicFee=basicFee; this.distanceRate=distanceRate;
+    }
+
+    public int calcFee(Car c){
+        return (int)((basicFee+c.getDistance()*distanceRate)*(c.getSpeed()/100)*(c.getDisplacement()/2000)/10)*10;
+    }
+    public void exitCar(Car c){
+        c.setOnway(3);
+        c.setFee(calcFee(c));
+    }
+}
+
+class Highway {
+
+    public void updateCar(Car[] cl, Time t, ExitGate e){
+        for(Car c: cl){
+            if(c.getOnway()==1||c.getOnway()==2){
+                int migration = (int)(t.getInterval(c.getEnterTime(), t)*c.getSpeed()/60.0);
+                if(migration<c.getDistance()){
+                    if(c.getOnway()==1){
+                        c.setPosition(c.getEnterDistatnce()+migration);
+                    }
+                    else{
+                        c.setPosition(c.getEnterDistatnce()-migration);
+                    }
+                }
+                else{
+                    e.exitCar(c);
+                }
+            }
         }
     }
 }
 
-class TIME {
-    int year;
-    int mon;
-    int date;
-    int hour;
-    int min;
+class Time {
+    private int year;
+    private int month;
+    private int date;
+    private int hour;
+    private int minute;
 
-    TIME(int year,int mon,int date){
-        this.year=year; this.mon=mon; this.date=date;
+    Time(int year,int month,int date,int hour,int minute){
+        this.year=year; this.month=month; this.date=date; this.hour=hour; this.minute=minute;
     }
-    TIME(int hour,int min){
-        this.hour=hour; this.min=min;
-    }
-    TIME(int year,int mon,int date,int hour,int min){
-        this.year=year; this.mon=mon; this.date=date; this.hour=hour; this.min=min;
-    }
-}
 
-class CAR {
-    int cnum; int cdis; int cvel;
-    double pos; double pos1; double pos2; double delp; double rep; double dt;
-    int deltime; TIME stime; TIME etime;
-    int onway;
-    int fee;
-    String spoint; String epoint;
+    public int getYear(){ return year; }
+    public int getMonth(){ return month; }
+    public int getDate(){ return date; }
+    public int getHour(){ return hour; }
+    public int getMinute(){ return minute; }
 
-    CAR(int num, int dis, int vel){
-        cnum=num; cdis=dis; cvel=vel; pos=0; pos1=0; pos2=0; delp=0; rep=0; dt=0; stime=null; deltime=0; etime= new TIME(0,0); onway=0; fee=0;
+    public boolean checkTimeError(Time t1){
+        switch(t1.month){
+            case 1,3,5,7,8,10,12:
+            if(1>t1.date||t1.date>31) { System.out.println("[error - time is not valid!]"); return false; }
+            else break;
+            case 4,6,9,11:
+            if(1>t1.date||t1.date>30) { System.out.println("[error - time is not valid!]"); return false; }
+            else break;
+            case 2:
+            if(t1.year%4==0&&t1.year%100!=0){
+                if(1>t1.date||t1.date>29) { System.out.println("[error - time is not valid!]"); return false; }
+                else break;
+            }
+            else {
+                if(1>t1.date||t1.date>30) { System.out.println("[error - time is not valid!]"); return false; } 
+                else break;
+            }
+            default: { System.out.println("[error - time is not valid!]"); return false; }
+        }
+        if(t1.hour>23||t1.hour<0||t1.minute>59||t1.minute<0) { System.out.println("[error - time is not valid!]"); return false; }
+        if(getInterval(this, t1)<=0) { System.out.println("[error - time should be later than current!]"); return false; }
+        return true;        
     }
+    public long getInterval(Time t2, Time t3){
+        LocalDateTime future = LocalDateTime.of(t2.getYear(),t2.getMonth(),t2.getDate(),t2.getHour(),t2.getMinute());
+        LocalDateTime present = LocalDateTime.of(t3.getYear(),t3.getMonth(),t3.getDate(),t3.getHour(),t3.getMinute());
+        Duration duration = Duration.between(future, present);
+        long durMinute = duration.toMinutes();
+        return durMinute;
+    }
+    public Time plusTime(int plus){
+        LocalDateTime present = LocalDateTime.of(this.year, this.month, this.date, this.hour, this.minute);
+        LocalDateTime future = present.plusMinutes(plus);
+        Time newTime = new Time(future.getYear(),future.getMonthValue(),future.getDayOfMonth(),future.getHour(),future.getMinute());
+        return newTime;
+    }
+    public String toString(){
+        return String.format("%02d/%02d/%02d-%02d:%02d", getYear(), getMonth(), getDate(), getHour(), getMinute());
+    }
+        
 }
